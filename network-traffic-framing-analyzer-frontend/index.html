@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Network Traffic Framing Analyzer — inspect Ethernet frames, protocol headers, payloads, and capture data.">
+  <title>FrameScope | Network Traffic Framing Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">F<span>•</span></div>
+        <div><strong>FrameScope</strong><small>TRAFFIC ANALYZER</small></div>
+      </div>
+      <div class="sidebar-label">WORKSPACE</div>
+      <button class="nav-item active" data-view="dashboard"><span class="nav-icon">▦</span> Overview</button>
+      <button class="nav-item" data-view="capture"><span class="nav-icon">◉</span> Live capture</button>
+      <button class="nav-item" data-view="file"><span class="nav-icon">⇧</span> PCAP analysis</button>
+      <button class="nav-item" data-view="hex"><span class="nav-icon">⌘</span> Hex inspector</button>
+      <div class="sidebar-bottom">
+        <div class="connection-card">
+          <span class="status-dot" id="sideStatusDot"></span>
+          <div><strong id="sideStatus">Checking backend</strong><small id="sideStatusDetail">127.0.0.1:5000</small></div>
+        </div>
+        <p class="sidebar-foot">BAITE203 · Computer Networks & Data Communications Lab</p>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand"><div class="brand-mark">F<span>•</span></div><strong>FrameScope</strong></div>
+        <div class="breadcrumb">Workspace <span>/</span> <strong id="breadcrumbPage">Overview</strong></div>
+        <div class="topbar-right"><span class="live-pill"><span class="status-dot"></span> LOCAL ANALYSIS</span><button class="icon-button" id="refreshBtn" title="Refresh backend status">↻</button></div>
+      </header>
+
+      <section class="page-heading">
+        <div>
+          <p class="eyebrow">NETWORK INTELLIGENCE / FRAME INSPECTION</p>
+          <h1 id="pageTitle">Network traffic, decoded.</h1>
+          <p class="subtitle" id="pageSubtitle">Inspect frame structure from capture files, live interfaces, or raw hexadecimal data.</p>
+        </div>
+        <div class="heading-actions"><button class="button button-secondary" id="demoBtn">Load demo data</button><button class="button button-primary" id="quickUploadBtn">↑ Analyze PCAP</button></div>
+      </section>
+
+      <div id="alert" class="alert hidden" role="status"></div>
+
+      <section class="stats-grid">
+        <article class="stat-card"><div class="stat-top"><span>Total analyzed frames</span><span class="stat-icon purple">▤</span></div><strong id="statFrames">0</strong><small>Frames in current workspace</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Protocols detected</span><span class="stat-icon blue">⌘</span></div><strong id="statProtocols">0</strong><small>Unique network / transport types</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Bytes inspected</span><span class="stat-icon green">↔</span></div><strong id="statBytes">0 B</strong><small>Captured frame bytes</small></article>
+        <article class="stat-card"><div class="stat-top"><span>Backend status</span><span class="stat-icon amber">⌁</span></div><strong id="statBackend" class="status-text">Checking</strong><small id="statBackendSub">Flask API connection</small></article>
+      </section>
+
+      <section class="content-grid">
+        <div class="panel frames-panel">
+          <div class="panel-heading"><div><h2>Frame explorer</h2><p>Choose a frame to inspect its fields and payload.</p></div><span class="count-badge" id="frameCountBadge">0 frames</span></div>
+          <div class="toolbar"><div class="search-wrap"><span>⌕</span><input id="frameSearch" type="search" placeholder="Search protocol, IP, MAC…"></div><select id="protocolFilter" aria-label="Filter protocol"><option value="">All protocols</option><option>TCP</option><option>UDP</option><option>ICMP</option><option>ARP</option><option>IPv4</option><option>IPv6</option></select></div>
+          <div class="table-scroll"><table><thead><tr><th>No.</th><th>Protocol</th><th>Source</th><th>Destination</th><th>Length</th><th>Info</th></tr></thead><tbody id="framesBody"><tr><td colspan="6" class="empty-state">No frames yet. Load demo data or analyze a capture file.</td></tr></tbody></table></div>
+          <div class="panel-footer"><span id="framesFooter">Waiting for frame data</span><button class="text-button" id="clearBtn">Clear workspace</button></div>
+        </div>
+
+        <div class="panel inspector-panel">
+          <div class="panel-heading"><div><h2>Frame inspector</h2><p id="selectedFrameSubtitle">Select a frame to view decoded fields.</p></div><span class="inspector-mark">⌗</span></div>
+          <div id="inspectorContent" class="inspector-content"><div class="inspector-empty"><div class="empty-graphic">⌘</div><strong>No frame selected</strong><span>Pick a frame from the explorer to inspect its structure.</span></div></div>
+        </div>
+      </section>
+
+      <section class="tools-grid">
+        <div class="panel tool-panel" id="fileTool">
+          <div class="panel-heading"><div><h2>Analyze capture file</h2><p>Upload a .pcap or .pcapng file from Wireshark or another capture tool.</p></div><span class="tool-icon">⇧</span></div>
+          <form id="pcapForm" class="upload-zone">
+            <input id="pcapInput" type="file" accept=".pcap,.pcapng,.cap,application/vnd.tcpdump.pcap" hidden>
+            <div class="upload-symbol">↑</div><strong>Drop a capture file here</strong><span>or choose a file from your computer</span>
+            <button class="button button-secondary" type="button" id="chooseFileBtn">Choose file</button>
+            <div id="fileName" class="file-name">PCAP / PCAPNG · Backend upload limit applies</div>
+            <button class="button button-primary" type="submit" id="analyzeFileBtn" disabled>Analyze capture</button>
+          </form>
+        </div>
+
+        <div class="panel tool-panel" id="hexTool">
+          <div class="panel-heading"><div><h2>Hex inspector</h2><p>Paste a hexadecimal frame to decode protocol headers and payload.</p></div><span class="tool-icon">⌘</span></div>
+          <form id="hexForm" class="hex-form">
+            <label for="hexInput">RAW FRAME HEX</label>
+            <textarea id="hexInput" rows="4" placeholder="ff ff ff ff ff ff 00 11 22 33 44 55 08 06 ..."></textarea>
+            <div class="hex-actions"><span>Spaces and line breaks are allowed.</span><button class="button button-primary" type="submit" id="analyzeHexBtn">Decode hex</button></div>
+          </form>
+        </div>
+      </section>
+
+      <section class="panel capture-panel" id="captureTool">
+        <div class="panel-heading"><div><h2>Live interface capture</h2><p>Capture packets from a network interface supported by the backend host.</p></div><span class="tool-icon live-icon">◉</span></div>
+        <div class="capture-controls">
+          <div class="field-group"><label for="interfaceSelect">NETWORK INTERFACE</label><select id="interfaceSelect"><option value="">Load interfaces first</option></select></div>
+          <div class="field-group"><label for="captureCount">FRAME LIMIT</label><input id="captureCount" type="number" min="1" max="1000" value="50"></div>
+          <button class="button button-secondary" id="loadInterfacesBtn" type="button">Refresh interfaces</button>
+          <button class="button button-primary" id="startCaptureBtn" type="button">▶ Start capture</button>
+          <button class="button button-danger" id="stopCaptureBtn" type="button" disabled>■ Stop</button>
+        </div>
+        <p class="capture-note">Live capture may require administrator/root privileges and may be restricted by macOS permissions. Only capture traffic you are authorized to inspect.</p>
+        <div class="capture-status"><span class="status-dot" id="captureDot"></span><span id="captureStatus">Capture stopped</span><span id="captureMeta"></span></div>
+      </section>
+      <footer><span>FrameScope <span class="footer-dot">•</span> Network Traffic Framing Analyzer</span><span>Built for BAITE203 lab project</span></footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
